@@ -1,0 +1,57 @@
+pipeline {
+    agent any
+    
+    environment {
+        GIT_REPO = 'https://github.com/username/repository.git'
+        BRANCH = 'main'
+        DEPLOY_SERVER = 'user@yourserver.com'
+        DEPLOY_PATH = '/var/www/app'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // Checkout code from Git
+                git branch: "${BRANCH}", url: "${GIT_REPO}"
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                // Build the project
+                sh 'mvn clean install'
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                // Run unit tests
+                sh 'mvn test'
+            }
+        }
+        
+        stage('Deploy') {
+            steps {
+                // Deploy the application to the server
+                sh """
+                scp target/app.war ${DEPLOY_SERVER}:${DEPLOY_PATH}
+                ssh ${DEPLOY_SERVER} 'sudo systemctl restart tomcat'
+                """
+            }
+        }
+    }
+
+    post {
+        always {
+            // Clean workspace after build
+            cleanWs()
+        }
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed. Please check the logs.'
+        }
+    }
+}
+
